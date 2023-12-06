@@ -1,0 +1,32 @@
+<ScheduleDataBase>
+	<teacher>
+		<name>Іван Іванович Іванов</name>
+		<department>Фізичний факультет</department>
+		<chair>Теоретичної фізики</chair>
+		<room>302</room>
+		<students>30</students>
+		<lectures>
+			вівторок - 04.12 - 8:40|
+		</lectures>
+	</teacher>
+	<teacher>
+		<name>Марія Петрівна Петрова</name>
+		<department>Хімічний факультет</department>
+		<chair>Органічної хімії</chair>
+		<room>201</room>
+		<students>25</students>
+		<lectures>
+			понеділок - 03.12 - 10:40|
+		</lectures>
+	</teacher>
+	<teacher>
+		<name>Олександр Миколайович Сидоров</name>
+		<department>Інженерно-фізичний факультет</department>
+		<chair>Електротехніка</chair>
+		<room>105</room>
+		<students>20</students>
+		<lectures>
+			середа - 05.12 - 8:40|
+		</lectures>
+	</teacher>
+</ScheduleDataBase>
