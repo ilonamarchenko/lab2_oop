@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Xml.Linq;
 using System.Linq;
 using Microsoft.Maui.Controls;
@@ -10,276 +10,276 @@ using System.Xml.Xsl;
 using Microsoft.Extensions.Logging;
 
 namespace lab22
+{
+    public interface IXmlProcessingStrategy
     {
-        public interface IXmlProcessingStrategy
-        {
-            IEnumerable<string> ProcessXml(XDocument xmlDocument, string selectedAttribute);
-        }
+        IEnumerable<string> ProcessXml(XDocument xmlDocument, string selectedAttribute);
+    }
 
-        public class LinqToXmlStrategy : IXmlProcessingStrategy
-        {
+    public class LinqToXmlStrategy : IXmlProcessingStrategy
+    {
         public string xslPath = "";
         public IEnumerable<string> ProcessXml(XDocument xmlDocument, string selectedAttribute)
-            {
-                return xmlDocument.Descendants("teacher")
-                                  .Where(x => x.Element(selectedAttribute) != null)
-                                  .Select(x => x.Element(selectedAttribute).Value);
-            }
-        }
-
-        public class DomXmlStrategy : IXmlProcessingStrategy
         {
-            public IEnumerable<string> ProcessXml(XDocument xmlDocument, string selectedAttribute)
-            {
-                var xmlDoc = new XmlDocument();
-                xmlDoc.LoadXml(xmlDocument.ToString());
-                var results = new List<string>();
+            return xmlDocument.Descendants("teacher")
+                              .Where(x => x.Element(selectedAttribute) != null)
+                              .Select(x => x.Element(selectedAttribute).Value);
+        }
+    }
 
-                var nodes = xmlDoc.GetElementsByTagName("teacher");
-                foreach (XmlNode node in nodes)
+    public class DomXmlStrategy : IXmlProcessingStrategy
+    {
+        public IEnumerable<string> ProcessXml(XDocument xmlDocument, string selectedAttribute)
+        {
+            var xmlDoc = new XmlDocument();
+            xmlDoc.LoadXml(xmlDocument.ToString());
+            var results = new List<string>();
+
+            var nodes = xmlDoc.GetElementsByTagName("teacher");
+            foreach (XmlNode node in nodes)
+            {
+                if (node[selectedAttribute] != null)
                 {
-                    if (node[selectedAttribute] != null)
-                    {
-                        results.Add(node[selectedAttribute].InnerText);
-                    }
+                    results.Add(node[selectedAttribute].InnerText);
                 }
-
-                return results;
             }
-        }
 
-        public class SaxXmlStrategy : IXmlProcessingStrategy
+            return results;
+        }
+    }
+
+    public class SaxXmlStrategy : IXmlProcessingStrategy
+    {
+        public IEnumerable<string> ProcessXml(XDocument xmlDocument, string selectedAttribute)
         {
-            public IEnumerable<string> ProcessXml(XDocument xmlDocument, string selectedAttribute)
+            var results = new List<string>();
+            using (var reader = xmlDocument.CreateReader())
             {
-                var results = new List<string>();
-                using (var reader = xmlDocument.CreateReader())
+                while (reader.Read())
                 {
-                    while (reader.Read())
+                    if (reader.NodeType == XmlNodeType.Element && reader.Name == "teacher")
                     {
-                        if (reader.NodeType == XmlNodeType.Element && reader.Name == "teacher")
+                        if (reader.MoveToAttribute(selectedAttribute))
                         {
-                            if (reader.MoveToAttribute(selectedAttribute))
-                            {
-                                results.Add(reader.Value);
-                            }
+                            results.Add(reader.Value);
                         }
                     }
                 }
-
-                return results;
             }
-        }
-        public class Teacher
-        {
-            public string Name { get; set; }
-            public string Department { get; set; }
-            public string Chair { get; set; }
-            public string Room { get; set; }
-            public string Students { get; set; }
-            public string Lectures { get; set; }
-            public string Details =>
-                $"Name: {Name}\nDepartment: {Department}\nChair: {Chair}\nRoom: {Room} \nStudents: {Students})\n Lectures: {Lectures}\n";
-        }
 
-        public partial class MainPage : ContentPage
-        {
+            return results;
+        }
+    }
+    public class Teacher
+    {
+        public string Name { get; set; }
+        public string Department { get; set; }
+        public string Chair { get; set; }
+        public string Room { get; set; }
+        public string Students { get; set; }
+        public string Lectures { get; set; }
+        public string Details =>
+            $"Name: {Name}\nDepartment: {Department}\nChair: {Chair}\nRoom: {Room} \nStudents: {Students})\n Lectures: {Lectures}\n";
+    }
+
+    public partial class MainPage : ContentPage
+    {
         public string xslPath = "";
         private List<Teacher> _savedScientists = new List<Teacher>();
-            private XDocument _xmlDocument;
-            private IXmlProcessingStrategy _currentStrategy;
-            private Dictionary<string, IXmlProcessingStrategy> _strategies;
-            private static readonly string HtmlFilePath = "C:\\Users\\Home\\Downloads\\Илона\\lab22\\lab22\\exportedData.html";
-            private static readonly string XmlFilePath = "C:\\Users\\Home\\Downloads\\Илона\\lab22\\lab22\\data.xml";
+        private XDocument _xmlDocument;
+        private IXmlProcessingStrategy _currentStrategy;
+        private Dictionary<string, IXmlProcessingStrategy> _strategies;
+        private static readonly string HtmlFilePath = "./exportedData.html";
+        private static readonly string XmlFilePath = "./data.xml";
 
-            public MainPage()
-            {
-                InitializeComponent();
+        public MainPage()
+        {
+            InitializeComponent();
 
-                _strategies = new Dictionary<string, IXmlProcessingStrategy>
+            _strategies = new Dictionary<string, IXmlProcessingStrategy>
                     {
                         { "LINQ to XML", new LinqToXmlStrategy() },
                         { "SAX", new SaxXmlStrategy() },
                         { "DOM", new DomXmlStrategy() }
                     };
 
-                _currentStrategy = _strategies["LINQ to XML"];
+            _currentStrategy = _strategies["LINQ to XML"];
 
-                LoadXmlFile();
+            LoadXmlFile();
 
-                foreach (var strategyName in _strategies.Keys)
-                {
-                    strategyPicker.Items.Add(strategyName);
-                }
-                strategyPicker.SelectedIndex = 0;
-            }
-            private string TransformXmlToHtml(string xmlFilePath, string xslPath)
+            foreach (var strategyName in _strategies.Keys)
             {
-                try
-                {
-                    XDocument xmlDocument = XDocument.Load(xmlFilePath);
-                    XslCompiledTransform transform = new XslCompiledTransform();
-                    transform.Load(xslPath);
+                strategyPicker.Items.Add(strategyName);
+            }
+            strategyPicker.SelectedIndex = 0;
+        }
+        private string TransformXmlToHtml(string xmlFilePath, string xslPath)
+        {
+            try
+            {
+                XDocument xmlDocument = XDocument.Load(xmlFilePath);
+                XslCompiledTransform transform = new XslCompiledTransform();
+                transform.Load(xslPath);
 
-                    using (StringWriter writer = new StringWriter())
-                    {
-                        transform.Transform(xmlDocument.CreateReader(), null, writer);
-                        return writer.ToString();
-                    }
-                }
-                catch (Exception ex)
+                using (StringWriter writer = new StringWriter())
                 {
-                    Console.WriteLine($"Error in XML to HTML transformation: {ex.Message}");
-                    return string.Empty;
+                    transform.Transform(xmlDocument.CreateReader(), null, writer);
+                    return writer.ToString();
                 }
             }
-
-            private XDocument CreateXmlFromSavedScientists(List<Teacher> teachers)
+            catch (Exception ex)
             {
-                var xmlDocument = new XDocument(
-                    new XElement("ScheduleDataBase",
-                        teachers.Select(s => new XElement("teacher",
-                            new XElement("name", s.Name),
-                            new XElement("department", s.Department),
-                            new XElement("chair", s.Chair),
-                            new XElement("room", s.Room),
-                            new XElement("students", s.Students),
-                            new XElement("lectures", s.Lectures)
-                        ))
-                    )
-                );
-
-                return xmlDocument;
+                Console.WriteLine($"Error in XML to HTML transformation: {ex.Message}");
+                return string.Empty;
             }
-            private void SaveXmlToFile(XDocument xmlDocument, string filePath)
+        }
+
+        private XDocument CreateXmlFromSavedScientists(List<Teacher> teachers)
+        {
+            var xmlDocument = new XDocument(
+                new XElement("ScheduleDataBase",
+                    teachers.Select(s => new XElement("teacher",
+                        new XElement("name", s.Name),
+                        new XElement("department", s.Department),
+                        new XElement("chair", s.Chair),
+                        new XElement("room", s.Room),
+                        new XElement("students", s.Students),
+                        new XElement("lectures", s.Lectures)
+                    ))
+                )
+            );
+
+            return xmlDocument;
+        }
+        private void SaveXmlToFile(XDocument xmlDocument, string filePath)
+        {
+            xmlDocument.Save(filePath);
+        }
+
+
+
+        private List<Teacher> GetAllScientists()
+        {
+            return _xmlDocument.Descendants("teacher")
+                               .Select(x => new Teacher
+                               {
+                                   Name = x.Element("name")?.Value,
+                                   Department = x.Element("department")?.Value,
+                                   Chair = x.Element("chair")?.Value,
+                                   Room = x.Element("room")?.Value,
+                                   Students = x.Element("students")?.Value,
+                                   Lectures = x.Element("lectures")?.Value,
+                               })
+                               .ToList();
+        }
+        private void LoadXmlFile()
+        {
+            try
             {
-                xmlDocument.Save(filePath);
+                _xmlDocument = XDocument.Load(XmlFilePath);
+                UpdatePicker();
             }
-
-
-
-            private List<Teacher> GetAllScientists()
+            catch (Exception ex)
             {
-                return _xmlDocument.Descendants("teacher")
-                                   .Select(x => new Teacher
-                                   {
-                                       Name = x.Element("name")?.Value,
-                                       Department = x.Element("department")?.Value,
-                                       Chair = x.Element("chair")?.Value,
-                                       Room = x.Element("room")?.Value,
-                                       Students = x.Element("students")?.Value,
-                                       Lectures = x.Element("lectures")?.Value,
-                                   })
-                                   .ToList();
+                Console.WriteLine($"Error loading XML file: {ex.Message}");
+                DisplayAlert("Error", $"Failed to load XML file: {ex.Message}", "OK");
             }
-            private void LoadXmlFile()
-            {
-                try
-                {
-                    _xmlDocument = XDocument.Load(XmlFilePath);
-                    UpdatePicker();
-                }
-                catch (Exception ex)
-                {
-                    Console.WriteLine($"Error loading XML file: {ex.Message}");
-                    DisplayAlert("Error", $"Failed to load XML file: {ex.Message}", "OK");
-                }
-            }
+        }
 
 
-            private void UpdatePicker()
+        private void UpdatePicker()
+        {
+            if (_xmlDocument != null)
             {
-                if (_xmlDocument != null)
-                {
-                    attributePicker.Items.Clear();
+                attributePicker.Items.Clear();
 
                 var attributes = _xmlDocument.Descendants("teacher").Elements()
                                              .Select(x => x.Name.LocalName)
                                              .Distinct();
-    
+
                 foreach (var attr in attributes)
+                {
+                    attributePicker.Items.Add(attr);
+                }
+            }
+        }
+
+        private void OnSearchClicked(object sender, EventArgs e)
+        {
+            if (_xmlDocument == null || attributePicker.SelectedIndex == -1)
+            {
+                return;
+            }
+
+            var selectedAttribute = attributePicker.Items[attributePicker.SelectedIndex];
+            var searchPhrase = searchEntry.Text?.ToLower() ?? "";
+
+            var scientists = _savedScientists.Any() ? _savedScientists : GetAllScientists();
+
+            if (!string.IsNullOrWhiteSpace(searchPhrase))
+            {
+                scientists = scientists.Where(s =>
+                {
+                    switch (selectedAttribute.ToLower())
                     {
-                        attributePicker.Items.Add(attr);
+                        case "name":
+                            return s.Name?.ToLower().Contains(searchPhrase) == true;
+                        case "department":
+                            return s.Department?.ToLower().Contains(searchPhrase) == true;
+                        case "chair":
+                            return s.Chair?.ToLower().Contains(searchPhrase) == true;
+                        case "room":
+                            return s.Room?.ToLower().Contains(searchPhrase) == true;
+                        case "lectures":
+                            return s.Lectures?.ToLower().Contains(searchPhrase) == true;
+                        case "students":
+                            return s.Students?.ToLower().Contains(searchPhrase) == true;
+                        default:
+                            return false;
                     }
-                }
+                }).ToList();
             }
+            logLabel.Text = $"Found {scientists.Count} results";
+            resultsListView.ItemsSource = scientists;
+        }
 
-            private void OnSearchClicked(object sender, EventArgs e)
+        private void OnSaveClicked(object sender, EventArgs e)
+        {
+            string savedXmlPath = "./savedTeachers.xml";
+
+            _savedScientists = resultsListView.ItemsSource as List<Teacher>;
+
+            if (_savedScientists != null && _savedScientists.Any())
             {
-                if (_xmlDocument == null || attributePicker.SelectedIndex == -1)
+                if (File.Exists(savedXmlPath))
                 {
-                    return;
+                    File.Delete(savedXmlPath);
                 }
 
-                var selectedAttribute = attributePicker.Items[attributePicker.SelectedIndex];
-                var searchPhrase = searchEntry.Text?.ToLower() ?? "";
+                var xmlDocument = CreateXmlFromSavedScientists(_savedScientists);
 
-                var scientists = _savedScientists.Any() ? _savedScientists : GetAllScientists();
+                SaveXmlToFile(xmlDocument, savedXmlPath);
 
-                if (!string.IsNullOrWhiteSpace(searchPhrase))
-                {
-                    scientists = scientists.Where(s =>
-                    {
-                        switch (selectedAttribute.ToLower())
-                        {
-                            case "name":
-                                return s.Name?.ToLower().Contains(searchPhrase) == true;
-                            case "department":
-                                return s.Department?.ToLower().Contains(searchPhrase) == true;
-                            case "chair":
-                                return s.Chair?.ToLower().Contains(searchPhrase) == true;
-                            case "room":
-                                return s.Room?.ToLower().Contains(searchPhrase) == true;
-                            case "lectures":
-                                return s.Lectures?.ToLower().Contains(searchPhrase) == true;
-                            case "students":
-                                return s.Students?.ToLower().Contains(searchPhrase) == true;
-                            default:
-                                return false;
-                        }
-                    }).ToList();
-                }
-                logLabel.Text = $"Found {scientists.Count} results";
-                resultsListView.ItemsSource = scientists;
+                DisplayAlert("Success", "Results saved successfully.", "OK");
             }
-
-            private void OnSaveClicked(object sender, EventArgs e)
+            else
             {
-                string savedXmlPath = "C:\\Users\\Home\\Downloads\\Илона\\lab22\\lab22\\savedTeachers.xml";
-
-                _savedScientists = resultsListView.ItemsSource as List<Teacher>;
-
-                if (_savedScientists != null && _savedScientists.Any())
-                {
-                    if (File.Exists(savedXmlPath))
-                    {
-                        File.Delete(savedXmlPath);
-                    }
-
-                    var xmlDocument = CreateXmlFromSavedScientists(_savedScientists);
-
-                    SaveXmlToFile(xmlDocument, savedXmlPath);
-
-                    DisplayAlert("Success", "Results saved successfully.", "OK");
-                }
-                else
-                {
-                    DisplayAlert("Info", "No results to save.", "OK");
-                }
+                DisplayAlert("Info", "No results to save.", "OK");
             }
+        }
 
-            private void OnClearClicked(object sender, EventArgs e)
-            {
-                resultLabel.Text = string.Empty;
-                attributePicker.SelectedIndex = -1;
-                _savedScientists.Clear();
-                resultsListView.ItemsSource = null;
-            }
+        private void OnClearClicked(object sender, EventArgs e)
+        {
+            resultLabel.Text = string.Empty;
+            attributePicker.SelectedIndex = -1;
+            _savedScientists.Clear();
+            resultsListView.ItemsSource = null;
+        }
 
-            public void SetProcessingStrategy(IXmlProcessingStrategy strategy)
-            {
-                _currentStrategy = strategy;
-            }
+        public void SetProcessingStrategy(IXmlProcessingStrategy strategy)
+        {
+            _currentStrategy = strategy;
+        }
 
         private async void OnOpenFileButton(object sender, EventArgs e)
         {
@@ -292,69 +292,68 @@ namespace lab22
         }
 
         private async void OnTransformButtonClicked(object sender, EventArgs e)
+        {
+            string savedXmlPath = "./savedTeachers.xml";
+
+            try
             {
-                //string xslPath = "C:\\Users\\Home\\Downloads\\Илона\\lab22\\lab22\\dateStyles.xslt";
-                string savedXmlPath = "C:\\Users\\Home\\Downloads\\Илона\\lab22\\lab22\\savedTeachers.xml";
-
-                try
+                if (_savedScientists.Any())
                 {
-                    if (_savedScientists.Any())
+                    var xmlDocument = CreateXmlFromSavedScientists(_savedScientists);
+                    SaveXmlToFile(xmlDocument, savedXmlPath);
+
+                    string htmlContent = TransformXmlToHtml(savedXmlPath, xslPath);
+
+                    if (!string.IsNullOrEmpty(htmlContent))
                     {
-                        var xmlDocument = CreateXmlFromSavedScientists(_savedScientists);
-                        SaveXmlToFile(xmlDocument, savedXmlPath);
-
-                        string htmlContent = TransformXmlToHtml(savedXmlPath, xslPath);
-
-                        if (!string.IsNullOrEmpty(htmlContent))
-                        {
-                            SaveHtmlToFile(htmlContent, HtmlFilePath);
-                            await DisplayAlert("Success", $"HTML saved to {HtmlFilePath}", "OK");
-                        }
-                        else
-                        {
-                            await DisplayAlert("Error", "Failed to generate HTML content.", "OK");
-                        }
+                        SaveHtmlToFile(htmlContent, HtmlFilePath);
+                        await DisplayAlert("Success", $"HTML saved to {HtmlFilePath}", "OK");
                     }
                     else
                     {
-                        await DisplayAlert("Info", "No saved teachers to transform.", "OK");
+                        await DisplayAlert("Error", "Failed to generate HTML content.", "OK");
                     }
                 }
-                catch (Exception ex)
+                else
                 {
-                    await DisplayAlert("Error", $"An error occurred: {ex.Message}", "OK");
+                    await DisplayAlert("Info", "No saved teachers to transform.", "OK");
                 }
             }
+            catch (Exception ex)
+            {
+                await DisplayAlert("Error", $"An error occurred: {ex.Message}", "OK");
+            }
+        }
 
         private void SaveHtmlToFile(string htmlContent, string filePath)
-            {
-                File.WriteAllText(filePath, htmlContent);
-            }
-
-            private async void OnItemSelected(object sender, SelectedItemChangedEventArgs e)
-            {
-                if (e.SelectedItem is Teacher selectedScientist)
-                {
-                    await DisplayAlert("Teachers Details", selectedScientist.Details, "OK");
-                }
-            }
-
-            private void StrategyPicker_SelectedIndexChanged(object sender, EventArgs e)
-            {
-                var selectedStrategy = strategyPicker.Items[strategyPicker.SelectedIndex];
-                _currentStrategy = _strategies[selectedStrategy];
-            }
-
-
-            private async void OnExitButtonClicked(object sender, EventArgs e)
-            {
-                bool answer = await DisplayAlert("Exit Programme", "Do you really want to exit the programme?", "Yes", "No");
-                if (answer)
-                {
-                    System.Diagnostics.Process.GetCurrentProcess().Kill();
-                }
-            }
-
-
+        {
+            File.WriteAllText(filePath, htmlContent);
         }
+
+        private async void OnItemSelected(object sender, SelectedItemChangedEventArgs e)
+        {
+            if (e.SelectedItem is Teacher selectedScientist)
+            {
+                await DisplayAlert("Teachers Details", selectedScientist.Details, "OK");
+            }
+        }
+
+        private void StrategyPicker_SelectedIndexChanged(object sender, EventArgs e)
+        {
+            var selectedStrategy = strategyPicker.Items[strategyPicker.SelectedIndex];
+            _currentStrategy = _strategies[selectedStrategy];
+        }
+
+
+        private async void OnExitButtonClicked(object sender, EventArgs e)
+        {
+            bool answer = await DisplayAlert("Exit Programme", "Do you really want to exit the programme?", "Yes", "No");
+            if (answer)
+            {
+                System.Diagnostics.Process.GetCurrentProcess().Kill();
+            }
+        }
+
+
     }
+}
